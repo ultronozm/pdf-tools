@@ -1287,6 +1287,11 @@ If WINDOW is t, redisplay pages in all windows."
 (defun pdf-view-new-window-function (winprops)
   ;; TODO: write documentation!
   ;; (message "New window %s for buf %s" (car winprops) (current-buffer))
+  (when (and (consp winprops)
+             (windowp (car winprops))
+             (null (cdr winprops)))
+    ;; Some callers may pass only (WINDOW).  Normalize to full winprops.
+    (setq winprops (image-mode-winprops (car winprops))))
   (cl-assert (or (eq t (car winprops))
                  (eq (window-buffer (car winprops)) (current-buffer))))
   (let ((ol (image-mode-window-get 'overlay winprops)))
@@ -1303,7 +1308,7 @@ If WINDOW is t, redisplay pages in all windows."
       ;; `window' property is only effective if its value is a window).
       (cl-assert (eq t (car winprops)))
       (delete-overlay ol))
-    (image-mode-window-put 'overlay ol)
+    (image-mode-window-put 'overlay ol winprops)
     ;; Clean up some overlays.
     (dolist (ov (overlays-in (point-min) (point-max)))
       (when (and (windowp (overlay-get ov 'window))

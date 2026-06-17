@@ -218,7 +218,7 @@ It should be added to `pre-redisplay-functions' buffer locally."
                      (and visible-pixels (> visible-pixels (/ (window-text-height win t) 2))))
                    (prog1 nil (message "End of buffer"))))
           (progn (image-mode-window-put 'vscroll (window-vscroll win t) win)
-                 (image-mode-window-put 'hscroll (window-hscroll win)) win)
+                 (image-mode-window-put 'hscroll (window-hscroll win) win))
         (set-window-vscroll win vscroll t)
         (set-window-hscroll win (or (image-mode-window-get 'hscroll win) 0))
         (set-window-start win start t))
@@ -341,7 +341,7 @@ It is also added to `revert-buffer-function'."
   (let ((inhibit-read-only t))
     (erase-buffer)
     (remove-overlays))
-  (image-mode-window-put 'displayed-pages nil)
+  (image-mode-window-put 'displayed-pages nil (selected-window))
   (pdf-roll-new-window-function))
 
 ;;;###autoload
@@ -401,8 +401,8 @@ It is also added to `revert-buffer-function'."
 
          (let ((inhibit-read-only t))
            (remove-overlays)
-           (image-mode-window-put 'displayed-pages nil)
-           (pdf-view-new-window-function (list (selected-window)))
+           (image-mode-window-put 'displayed-pages nil (selected-window))
+           (pdf-view-new-window-function (image-mode-winprops (selected-window)))
            (set-buffer-modified-p nil)))))
 
 (defun pdf-roll--get-display-property ()
