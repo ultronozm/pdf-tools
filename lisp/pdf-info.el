@@ -143,6 +143,14 @@ in a `with-temp-buffer' form."
 ;; * Variables
 ;; * ================================================================== *
 
+(defvar pdf-info-renderpage-functions nil
+  "Functions called before rendering a page.
+Each function receives the FILE-OR-BUFFER argument to
+`pdf-info-renderpage', which may be nil for the current buffer.
+Functions can restore document options lost when the server restarts
+or the document is closed.  Rendering may be asynchronous; functions
+issuing synchronous queries should bind `pdf-info-asynchronous' to nil.")
+
 (defvar pdf-info-asynchronous nil
   "If non-nil process queries asynchronously.
 
@@ -1613,6 +1621,7 @@ Return the data of the corresponding PNG image."
   (when (keywordp file-or-buffer)
     (push file-or-buffer commands)
     (setq file-or-buffer nil))
+  (run-hook-with-args 'pdf-info-renderpage-functions file-or-buffer)
   (apply #'pdf-info-query
     'renderpage
     (pdf-info--normalize-file-or-buffer file-or-buffer)

@@ -1393,42 +1393,43 @@ This tells the various modes to use their face's dark colors."
   (pdf-cache-clear-images)
   (pdf-view-redisplay t))
 
+(defun pdf-view--midnight-set-options (&optional file-or-buffer)
+  "Restore midnight colors for FILE-OR-BUFFER before rendering."
+  (let ((buffer
+         (cond
+          ((bufferp file-or-buffer) file-or-buffer)
+          ((null file-or-buffer) (current-buffer))
+          ((and (derived-mode-p 'pdf-view-mode)
+                (equal (expand-file-name file-or-buffer)
+                       (pdf-view-buffer-file-name)))
+           (current-buffer))
+          (t (find-buffer-visiting file-or-buffer)))))
+    (when (buffer-live-p buffer)
+      (with-current-buffer buffer
+        (when (bound-and-true-p pdf-view-midnight-minor-mode)
+          (let ((pdf-info-asynchronous nil))
+            (pdf-info-setoptions
+             buffer
+             :render/foreground (or (car pdf-view-midnight-colors) "black")
+             :render/background (or (cdr pdf-view-midnight-colors) "white")
+             :render/gamma pdf-view-midnight-gamma
+             :render/gammabeforeinvert pdf-view-midnight-gamma-before-invert
+             :render/usecolors (if pdf-view-midnight-invert 2 1))))))))
+
+(add-hook 'pdf-info-renderpage-functions #'pdf-view--midnight-set-options)
+
 (define-minor-mode pdf-view-midnight-minor-mode
   "Apply a color-filter appropriate for past midnight reading.
 
-The colors are determined by the variable
-`pdf-view-midnight-colors', which see. "
+The colors are determined by `pdf-view-midnight-colors'.  They are
+restored before rendering if the document was closed in the server
+or the server restarted."
   :group 'pdf-view
   :lighter " Mid"
   (pdf-util-assert-pdf-buffer)
-  ;; FIXME: Maybe these options should be passed stateless to pdf-info-renderpage ?
-  (let ((enable (lambda ()
-                  (pdf-info-setoptions
-                   :render/foreground (or (car pdf-view-midnight-colors) "black")
-                   :render/background (or (cdr pdf-view-midnight-colors) "white")
-                   :render/gamma pdf-view-midnight-gamma
-                   :render/gammabeforeinvert pdf-view-midnight-gamma-before-invert
-                   :render/usecolors
-                   (if pdf-view-midnight-invert
-                       ;; If midnight invert is enabled, pass "2" indicating
-                       ;; that :render/foreground and :render/background should
-                       ;; be ignored and to instead invert the PDF (preserving
-                       ;; hue)
-                       2
-                     ;; If invert is not enabled, pass "1" indictating that
-                     ;; :render/foreground and :render/background should be used
-                     1)))))
-    (cond
-     (pdf-view-midnight-minor-mode
-      (add-hook 'after-save-hook enable nil t)
-      (add-hook 'after-revert-hook enable nil t)
-      (funcall enable))
-     (t
-      (remove-hook 'after-save-hook enable t)
-      (remove-hook 'after-revert-hook enable t)
-      (pdf-info-setoptions
-       ;; Value "0" indicates that colors should remain unchanged
-       :render/usecolors 0))))
+  (if pdf-view-midnight-minor-mode
+      (pdf-view--midnight-set-options)
+    (pdf-info-setoptions :render/usecolors 0))
   (pdf-cache-clear-images)
   (pdf-view-redisplay t))
 
